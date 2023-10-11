@@ -50,6 +50,10 @@ class Room:
     def exist_client(self, client_name: str) -> bool:
         return client_name in self.clients
 
+    def remove_client(self, client_name: str) -> None:
+        if self.exist_client(client_name):
+            del self.clients[client_name]
+
 
 class RoomManager:
 
@@ -156,7 +160,15 @@ def handle_game(room: Room, client: Client):
         round_cntr += 1
         room.estimations_for_round[round_cntr] = {}
 
+        send_message(client, f"+++ Round {round_cntr} +++\n")
         estimate = receive_message(client, "Enter your estimate: ")
+
+        if estimate == "exit":
+            send_message(client, "\nBye bye!\n")
+            send_message(room.get_other_clients(client), f"\n{client.name} left the room.\n")
+            room.remove_client(client.name)
+            return
+
         # send_message(room.get_other_clients(client), f"\n{client.name} estimated.\n")
         room.estimations_for_round[round_cntr][client.name] = estimate
         send_message(client, "\n")
@@ -169,10 +181,11 @@ def handle_game(room: Room, client: Client):
         send_message(client, "\n\n")
 
         if len(room.estimations_for_round[round_cntr]) == len(room.clients):
-            send_message(client, "All estimates received.\n")
+            send_message(client, ANSI_CLEAR_SCREEN)
+            send_message(client, f"All estimates received for Round {round_cntr}.\n")
             send_message(client, "Estimates are:\n")
             for client_name, estimate in room.estimations_for_round[round_cntr].items():
-                send_message(client, f"\t- {client_name}: {estimate}\n")
+                send_message(client, f"- {client_name}: {estimate}\n")
             send_message(client, "Round finished.\n")
             send_message(client, "-" * 50 + "\n")
             send_message(client, "\n\n")
