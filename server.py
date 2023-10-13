@@ -164,11 +164,22 @@ def handle_game(room: Room, client: Client):
         send_message(client, f"+++ Round {round_cntr} +++\n")
         estimate = receive_message(client, "Enter your estimate: ")
 
-        if estimate == "exit":
+        if estimate.lower() in ("exit", "bye"):
             send_message(client, "\nBye bye!\n")
-            send_message(room.get_other_clients(client), f"\n{client.name} left the room.\n")
+            if len(room.clients) > 1:
+                send_message(room.get_other_clients(client), f"\n{client.name} left the room.\n")
             room.remove_client(client.name)
             # Let's terminate the thread for this client
+            return
+
+        if estimate == "terminate" and client.is_host:
+            send_message(room.clients, "\nClosing room. All rounds finished.\n")
+            for c in room.clients.values():
+                c.soc_client.close()
+            client_names = list(room.clients.keys())
+            for client_name in client_names:
+                room.remove_client(client_name)
+            room_manager.rooms.pop(room.room_name)
             return
 
         # send_message(room.get_other_clients(client), f"\n{client.name} estimated.\n")
