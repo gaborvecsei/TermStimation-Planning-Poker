@@ -1,3 +1,4 @@
+import argparse
 import socket
 import threading
 import time
@@ -104,7 +105,7 @@ def receive_message(client: Union[Client, socket.socket], message: Optional[str]
         return client.recv(1024).strip().decode()
 
 
-def handle_client(soc_client: socket.socket):
+def handle_room_join_and_creation(soc_client: socket.socket):
     send_message(soc_client, ANSI_CLEAR_SCREEN)
     send_message(soc_client, "Welcome to the planning poker server!\n")
 
@@ -123,9 +124,8 @@ def handle_client(soc_client: socket.socket):
         room = Room(room_number)
         room_manager.add(room)
         print(f"Created room {room_number}.")
-        send_message(soc_client, f"Room {room_number} created.\n")
+        send_message(soc_client, f"Room {room_number} created where you are the host.\n")
         is_user_host = True
-        send_message(soc_client, "You are the host.\n")
 
     client_name = receive_message(soc_client, "Entry your name: ")
     client = Client(client_name, soc_client, is_user_host)
@@ -133,7 +133,7 @@ def handle_client(soc_client: socket.socket):
     print(f"Client {client_name} joined room {room_number}.")
     send_message(room.get_other_clients(client), f"{client.name} joined the room.\n")
 
-    # Start the game loop
+    # Start the actual game
     handle_game(room, client)
 
 
@@ -192,20 +192,27 @@ def handle_game(room: Room, client: Client):
             time.sleep(1)
 
 
-def main():
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Planning poker server")
+    parser.add_argument("-p", "--port", type=int, default=PORT, help="Port to listen on")
+    return parser.parse_args()
+
+
+def start_server(port: int):
     # Set up a socket to listen for incoming SSH connections
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(('0.0.0.0', PORT))
-    server_socket.listen(2)
+    server_socket.bind(('0.0.0.0', port))
+    server_socket.listen(5)
 
-    print(f"Server listening on port {PORT}...")
+    print(f"Server listening on port {port}...")
 
     while True:
         client, addr = server_socket.accept()
         print(f"Accepted connection from {addr[0]}:{addr[1]}")
-        client_handler = threading.Thread(target=handle_client, args=(client,))
+        client_handler = threading.Thread(target=handle_room_join_and_creation, args=(client,))
         client_handler.start()
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_arguments()
+    start_server(args.port)
