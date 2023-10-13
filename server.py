@@ -8,6 +8,7 @@ PORT = 2222
 
 # ANSI escape code to clear the screen
 ANSI_CLEAR_SCREEN = "\x1b[2J\x1b[H"
+SPINNER_ANIMATION_FRAMES = ["|", "/", "-", "\\"]
 
 
 class Client:
@@ -133,11 +134,6 @@ def handle_room_join_and_creation(soc_client: socket.socket):
     print(f"Client {client_name} joined room {room_number}.")
     send_message(room.get_other_clients(client), f"{client.name} joined the room.\n")
 
-    # Start the actual game
-    handle_game(room, client)
-
-
-def handle_game(room: Room, client: Client):
     if client.is_host:
         started_input = ""
         while started_input != "start":
@@ -148,12 +144,17 @@ def handle_game(room: Room, client: Client):
             send_message(room.clients, ANSI_CLEAR_SCREEN)
             print(f"Session started for rooom {room.room_name}.")
     else:
-        send_message(client, "Waiting for host to start the session...")
+        send_message(client, "Waiting for host to start the session...\n")
         while not room.session_started:
-            time.sleep(1)
-            send_message(client, ".")
+            for f in SPINNER_ANIMATION_FRAMES:
+                time.sleep(0.5)
+                send_message(client, f"\r{f}")
         send_message(client, "\n")
 
+    handle_game(room, client)
+
+
+def handle_game(room: Room, client: Client):
     round_cntr = 0
 
     while True:
@@ -167,6 +168,7 @@ def handle_game(room: Room, client: Client):
             send_message(client, "\nBye bye!\n")
             send_message(room.get_other_clients(client), f"\n{client.name} left the room.\n")
             room.remove_client(client.name)
+            # Let's terminate the thread for this client
             return
 
         # send_message(room.get_other_clients(client), f"\n{client.name} estimated.\n")
@@ -176,13 +178,14 @@ def handle_game(room: Room, client: Client):
         if len(room.estimations_for_round[round_cntr]) < len(room.clients):
             send_message(client, "Waiting for other players to estimate...")
         while len(room.estimations_for_round[round_cntr]) < len(room.clients):
-            time.sleep(1)
-            send_message(client, ".")
+            for f in SPINNER_ANIMATION_FRAMES:
+                time.sleep(0.5)
+                send_message(client, f"\r{f}")
         send_message(client, "\n\n")
 
         if len(room.estimations_for_round[round_cntr]) == len(room.clients):
             send_message(client, ANSI_CLEAR_SCREEN)
-            send_message(client, f"All estimates received for Round {round_cntr}.\n")
+            send_message(client, f"All estimates received for Round {round_cntr}.\n\n")
             send_message(client, "Estimates are:\n")
             for client_name, estimate in room.estimations_for_round[round_cntr].items():
                 send_message(client, f"- {client_name}: {estimate}\n")
