@@ -176,7 +176,7 @@ def handle_game(room: Room, client: Client):
         send_message(client, "\n")
 
         if len(room.estimations_for_round[round_cntr]) < len(room.clients):
-            send_message(client, "Waiting for other players to estimate...")
+            send_message(client, "Waiting for other players to estimate...\n")
         while len(room.estimations_for_round[round_cntr]) < len(room.clients):
             for f in SPINNER_ANIMATION_FRAMES:
                 time.sleep(0.5)
@@ -192,7 +192,6 @@ def handle_game(room: Room, client: Client):
             send_message(client, "Round finished.\n")
             send_message(client, "-" * 50 + "\n")
             send_message(client, "\n\n")
-            time.sleep(1)
 
 
 def parse_arguments():
